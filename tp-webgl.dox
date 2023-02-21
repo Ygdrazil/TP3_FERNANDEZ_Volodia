@@ -1,0 +1,483 @@
+/**
+\page ig_tp3 TP3 Un peu de WebGL et de shaders avec three.js
+
+\b author: \b Jacques-Olivier \b Lachaud
+
+[TOC]
+  
+\section ig_tp3_1 1 - Objectifs, pointeurs utiles, mise en place
+
+L'objectif de ce TP est de vous montrer comment utiliser la puissance
+graphique de vos ordinateurs dans de simples pages web. Ainsi, vous
+pourrez intégrer dans vos pages web de la 3D, du rendu (presque)
+réaliste temps réel, des jeux, des effets spéciaux 2D ou 3D, etc. Les
+technologies utilisées ici sont le javascript, la bibliothèque WebGL
+(une surcouche d'OpenGL pour le javascript), et la bibliothèque <a
+href="threejs.org">three.js</a>, qui simplifie considérablement
+l'utilisation à WebGL. Nous toucherons aussi un petit peu aux shaders,
+qui sont des programmes compilés par et exécutés sur la carte
+graphique.
+
+\subsection ig_tp3_1_1 1.1 - Installation de three.js et d'un serveur web local
+
+Il suffit de le télécharger de son site officiel
+(https://threejs.org). Il est mis aussi dans l'archive du TP. Ensuite,
+pour pouvoir exécuter facilement vos codes html/js/webgl, il faut
+qu'il y ait un serveur web (http/https) qui tourne sur votre
+machine. C'est nécessaire, car pour des raisons de sécurité, votre
+navigateur interdirait le chargement de fichiers extérieurs. Si vous
+n'en avez pas déjà un (il suffit de voir si http://localhost:8080
+donne qqchose), vous pouvez installer Servez
+(https://github.com/greggman/servez), qui s'installe et se lance
+facilement. Ensuite, normalement le premier <a
+href="question-1.html">exemple</a> de code three.js devrait s'exécuter
+sans problème.
+
+\note Lorsque ça ne marche pas (en général, la fenêtre WebGL reste
+noire), avec Chrome, allez dans `View -> Developer > Developer`
+tools. Les erreurs sont affichées. Vous pouvez exécuter pas à pas
+votre code, comme dans un débuggeur classique.
+
+\note Un bon point de départ est <a
+href="https://threejs.org/docs/index.html#manual/introduction/Creating-a-scene">
+la documentation three.js</a>. Les exemples sont aussi une mine
+d'information.
+
+\subsection ig_tp3_1_2 1.2 - Parties essentielles d'un code WebGL avec three.js
+
+Comme vous fabriquez une page web, vous avez besoin d'un fichier HTML,
+éventuellement d'un fichier de style CSS. De plus, il faut charger les
+bibliothèques javascript utiles dans la page. Enfin, il faut prévoir
+un champ `canvas` qui contiendra la fenêtre WebGL et lui donner un nom
+(ici `webglcanvas`).
+
+\code
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>A small introduction to three.js webgl [1]</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <link rel="stylesheet" href="css/basic.css">
+  
+    <script src="three.js"></script>
+    <script src="js/Detector.js"></script>
+    <script type="text/javascript">
+    // (I) Put all your code here.
+    </script>
+  </head>
+  <body>
+    <div id="info"> a first three.js example </div>
+    <canvas id="webglcanvas" style="border: none;background-color:#000000"
+	    width="600" height="500"></canvas>
+    <!-- We run the WebGL code at the end to be sure that the document is loaded.
+      -->
+    <script>
+      // We put the starting point of the javascript here, so that the whole page
+      // is loaded before WebGL code is executed.
+      init(); run();
+    </script> 
+  </body>
+</html>
+\endcode
+
+Maintenant voilà le code javascript pour faire un rendu minimal
+3D. Notez que l'utilisation de three.js facilite grandement la
+création de scènes 3D et leur rendu. Le même code WebGL "bas niveau"
+prendrait pas loin de 150 lignes. Notamment il faudrait gérer à la
+main la communication des données entre le javascript et les
+shaders. Ici, three.js se charge de tout ou presque.
+
+\code
+    <script type="text/javascript">
+    // (I) Put all your code here.
+
+      // Checks that your browser supports WebGL. 
+      if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+      
+      var renderer = null; 
+      var scene    = null;
+      var camera   = null;
+      var cube     = null;
+      var curTime  = Date.now();
+      
+      // This function is called whenever the document is loaded
+      function init() {
+          // Get display canvas
+          var canvas = document.getElementById("webglcanvas");
+          console.log( canvas );
+          
+          // Create the Three.js renderer and attach it to our canvas
+          renderer = new THREE.WebGLRenderer( { canvas: canvas,
+                                                antialias: true } );
+          // Set the viewport size
+          renderer.setSize( canvas.width, canvas.height );
+          // Create a new Three.js scene
+          scene = new THREE.Scene();
+          // Add  a camera so we can view the scene
+          camera = new THREE.PerspectiveCamera( 45, canvas.width / canvas.height,
+                                                1, 4000 );
+          // Create a texture-mapped cube and add it to the scene
+          // First, create the texture map
+          var mapUrl = "images/webgl-logo-256.jpg";
+          var map    = new THREE.TextureLoader().load( mapUrl );
+          
+          // Now, create a Basic material; pass in the map
+          var material = new THREE.MeshBasicMaterial({ map: map });
+          
+          // Create the cube geometry
+          var geometry = new THREE.BoxGeometry(2, 2, 2);
+          
+          // And put the geometry and material together into a mesh
+          cube = new THREE.Mesh(geometry, material);
+          
+          // Move the mesh back from the camera and tilt it toward the viewer
+          cube.position.z = -8;
+          cube.rotation.x = Math.PI / 5;
+          cube.rotation.y = Math.PI / 5;
+          
+          // Finally, add the mesh to our scene
+          scene.add( cube );
+      }
+      
+      // This function is called regularly to update the canvas webgl.
+      function run() {
+          // Ask to call again run 
+          requestAnimationFrame( run );
+          
+          // Render the scene
+          render();
+          
+          // Calls the animate function if objects or camera should move
+          animate();
+      }
+      
+      // This function is called regularly to take care of the rendering.
+      function render() {
+          // Render the scene
+          renderer.render( scene, camera );
+      }
+      
+      // This function is called regularly to update objects.
+      function animate() {
+          // Computes how time has changed since last display
+          var now       = Date.now();
+          var deltaTime = now - curTime;
+          curTime       = now;
+          var fracTime  = deltaTime / 1000; // in seconds
+          // Now we can move objects, camera, etc.
+          // Example: rotation cube
+          var angle = 0.1 * Math.PI * 2 * fracTime; // one turn per 10 second.
+          cube.rotation.y += angle;
+      }
+      
+    </script>
+\endcode
+
+En gros, un code WebGL a suit toujours les étapes suivantes:
+
+D'abord l'initialisation:
+
+-# vérification que votre navigateur comprend WebGL,
+-# récupération d'une zone de dessin (canvas) dans la page HTML, puis
+   création d'un objet `renderer` qui calculera le rendu,
+-# création d'une scène où les objets graphiques et les lumières
+   seront placées, et d'une caméra (au moins).
+
+Ensuite, les autres fonctions sont utilisées régulièrement (plusieurs
+fois pour seconde) pour effectuer le rendu temps réel, l'animation et
+l'interaction avec l'utilisateur.
+
+- la fonction `run` doit être appelée une première fois puis demande
+  au navigateur à être rappelée dès que nécessaire via
+  `requestAnimationFrame`. Ensuite, elle appelle juste `render` (pour
+  faire le rendu) et `animate` pour mettre à jour les positions, la
+  géométrie, les couleurs, etc. A priori, nous n'avez pas besoin d'y toucher.
+
+- la fonction `render` effectue le rendu souhaité. On voit qu'il
+  suffit de la modifier si on veut faire plusieurs zones de rendu avec
+  plusieurs camera.
+
+- la fonction `animate` sert à mettre à jour la géométrie de la scène
+  en fonction du temps. On récupère la variation de temps depuis le
+  dernier affichage puis on met à jour les objets en déplacement.
+
+Dans l'exemple précédent, la scène se réduit à un cube, placé en
+`(0,0,-8)`, avec un `material` qui est juste une texture. La caméra
+est elle placée en ses coordonnées par défaut `(0,0,0)` et regarde
+vers les z négatifs. L'animation fait juste tourner l'axe y du cube
+(au sens des coordonnées d'Euler).
+
+\image html tp3-q1.png "Premier exemple webgl"
+
+\section ig_tp3_2 2 - Premiers pas en three.js
+
+\subsection ig_tp3_2_1 2.1 - D'autres géométries
+
+Les objets géométriques 3D sont représentés à l'aide de `Mesh`, et combine deux propriétés: leur géométrie (simple comme cube ou sphère, complexe comme des surfaces triangulées ou des extrusions de splines), et leur matériau (couleur, propriétés diffuses ou spéculaires, textures (diffuses ou spéculaires), carte de normales et bumpmap, etc).
+
+Three.js vous fournit plein de classes toutes faites pour la géométrie:
+- BoxGeometry, SphereGeometry, CylinderGeometry, etc, pour les formes élémentaires,
+- PolyhedronGeometry, LatheGeometry for more complex ones,
+- BufferGeometry versions of most of them exist for performance.
+
+\b Exercice \b 2.1. Remplacez le cube par une sphère de rayon 1. Remplacez la texture webgl par la texture earth_atmos_2048.jpg.
+
+Pour faire plusieurs objets, il suffit de les ajouter à la scène. On
+verra ci-dessous comment les grouper, ce qui facilitera grandement le
+placement et l'animation des objets.
+
+@note Three.js, contrairement à ce que son nom indique, propose aussi
+des géométries "2D", et peut faire du rendu 2D.
+
+\subsection ig_tp3_2_2 2.2 - Matériaux et lumières
+
+Pour donner un aspect plus 3D à nos scènes, il manque deux ingrédients
+fondamentaux: des lumières et des matériaux sensibles à la position
+des lumières et de la caméra. Là encore, nous disposons de plusieurs
+classes pour faire de l'illumination: AmbientLight, DirectionalLight,
+PointLight, SpotLight sont les plus courantes.
+
+Il suffit aussi d'instancier et d'ajouter une lumière à une scène pour
+qu'elle soit prise en compte.
+
+\code
+          // Add a white point light
+	  light = new THREE.PointLight( 0xffffff, 1.5);
+	  light.position.x = ...;
+          scene.add( light );
+\endcode
+
+Ensuite, on peut créer un matériau qui est sensible aux
+lumières. Plusieurs matériaux classiques ou moins classiques sont
+fournis par three.js: MeshBasicMaterial, MeshDepthMaterial,
+MeshLambertMaterial, MeshNormalMaterial, MeshPhongMaterial,
+MeshPhysicalMaterial MeshStandardMaterial MeshToonMaterial, etc.  Ce
+qui est pratique, c'est que three.js genère tout le code du vertex shader
+et du fragment shader à votre place.
+
+@note Si vous voulez écrire votre propre shader, la classe
+ShaderMaterial permet de le faire.
+
+Le côté remarquable est que l'on peut choisir comme on veut les
+matériaux pour des objets différents. Toute la difficulté d'associer
+le bon shader aux bons objets est géré en interne par three.js.
+
+\b Exercice \b 2.2. Remplacez le matériau de votre sphère par un MeshPhongNormal. Donnez-lui une spécularité blanche bien visible.
+
+\subsection ig_tp3_2_3 2.3 - Groupes et transformations géométriques
+
+Les objets géométriques ne sont pas seulement listés dans une scène
+géométrique, mais sont plutôt organisés sous forme d'une
+hiérarchie. L'intérêt (en dehors des aspects performances lorsqu'on
+ajoute des niveaux de détails) est qu'un transformation géométrique
+appliquée à un noeud est appliquée à tous les descendants du
+noeud. Ainsi, si on veut créer une voiture, on créera un noeud
+voiture, puis des descendants comme le chassis ou la carosserie, et
+les roues seront des descendants du chassis. On pourra faire tourner
+les roues par rapport au chassis, et un mouvement global de la voiture
+déplacera tout ce beau monde.
+
+Tout objet géométrique (descendant de `Object3D`) peut avoir des fils,
+mais en général on préfère utiliser un `Group` pour rassembler des
+objets géométriques.
+
+\b Exercice \b 2.3. Créer une scène de type "système solaire" avec au
+centre le soleil (vous placez une lumière `PointLight` et une sphère),
+autour une planète terre (qui tourne autour du soleil), et autour de
+la terre une lune qui tourne autour. Vous pouvez aussi faire tourner
+la terre sur elle-même, sachant qu'elle a un axe tourné par rapport au
+soleil !
+
+@note N'oubliez pas qu'il y a des champs `position.x`, `position.y`,
+`rotation.x`, etc, dans chaque objet géométrique ou groupe. Vous aurez
+besoin de rajouter des variables globales et de créer des groupes pour
+rassembler les planètes et aussi les faire tourner autour du
+soleil. Le déplacement des angles dans `animate` devraient ressembler
+à ça:
+
+\code
+var angle = fracTime * Math.PI * 2;
+// Notez que l'axe y est l'axe "vertical" usuellement.
+earthGroup.rotation.y += angle / 365; // la terre tourne en 365 jours
+earth.rotation.y      += angle; // et en un jour sur elle-même
+moonGroup.rotation.y  += angle / 28; // la lune tourne en 28 jours autour de la terre
+moon.rotation.y       += angle /28; // et en 28 jours aussi sur elle-même pour faire face à la terre
+\endcode
+
+\image html tp3-q2-3.png "Un petit système solaire"
+
+\subsection ig_tp3_2_4 2.4 - Contrôle de la caméra par le programme
+
+De la même façon qu'on peut déplacer les objets, on peut déplacer la
+caméra pour voir la scène sous d'autres angles et positions. Il suffit
+par exemple de modifier les champs `camera.position` ou
+`camera.lookAt` pour déplacer la caméra. Ajoutez la ligne ci-dessous dans `animate`:
+
+\code
+camera.lookAt( earth.matrixWorld.getPosition() );
+\endcode
+
+De façon remarquable, la caméra pointe toujours vers la terre. Notez
+que l'on doit demander les coordonnées de la terre en coordonnées
+absolues dans le monde, car ses coordonnées relatives sont fixes en
+fait (ici, `(5,0,0)`).
+
+\b Exercice \b 2.4. Mettez la camera sur une orbite elliptique en
+définissant une variable globale `cameraAngle` que vous mettrez à jour
+dans `animate`, puis utilisez l'équation paramétrique de l'ellipse
+pour placer directement la camera:
+
+\code
+// Avec un grand demi-axe de 5 et un petit demi-axe de 3
+camera.position.x = 5 * Math.cos( cameraAngle );
+camera.position.y = 3 * Math.sin( cameraAngle );
+\endcode
+
+\image html tp3-q2-4.png "Un petit système solaire, vue d'un astéroïde"
+
+\subsection ig_tp3_2_5 2.5 - Contrôle de la caméra par la souris
+
+On peut bien sûr aussi piloter les déplacements de la caméra via une souris ou le clavier. L'idée est de définir des callbacks pour des événements. Cela ressemble à ça:
+
+\code
+domElement.addEventListener( 'contextmenu', onContextMenu, false );
+domElement.addEventListener( 'mousedown', onMouseDown, false );
+domElement.addEventListener( 'wheel', onMouseWheel, false );
+domElement.addEventListener( 'touchstart', onTouchStart, false );
+domElement.addEventListener( 'touchend', onTouchEnd, false );
+domElement.addEventListener( 'touchmove', onTouchMove, false );
+...
+\endcode
+
+Faire une caméra manipulable prend beaucoup de temps. Heureusement,
+three.js fournit quelques classes toutes faites pour contrôler la
+caméra. Nous utiliserons le script `OrbitControls.js` (tiré des
+exemples). Une fois chargé, il suffit d'instancier un `OrbitControls`,
+de le paramétrer, et d'appeler régulièrement sa méthode `update`.
+
+\code
+controls = new THREE.OrbitControls( camera, renderer.domElement );
+//controls.addEventListener( 'change', render ); // call this only in static scenes (i.e., if there is no animation loop)
+controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
+controls.dampingFactor = 0.25;
+controls.screenSpacePanning = false;
+controls.minDistance = 1;
+controls.maxDistance = 20;
+\endcode
+
+Et dans `animate`:
+\code
+controls.update();
+\endcode
+
+\b Exercice \b 2.5. Ajouter un contrôleur "orbite" qui pilote
+maintenant la camera (vous devez enlever certaines lignes faites à la
+question précédent). Modifiez la cible du contrôleur (`target`) pour
+que ce soit la terre.
+
+
+\subsection ig_tp3_2_6 2.6 - Mettre un fond à votre scène
+
+Pour mettre un fond à une scène, on fabrique une sphère ou un cube
+"lointain" et on plaque dessus -- plus précisément dessous -- une
+texture. Ces fonds sont souvent utilisés aussi en tant qu'\a
+environmentMap pour faire des effets de reflets jolis
+(e.g. https://threejs.org/examples/?q=en#webgl_materials_envmaps).
+Three.js donne même un champ `background` à une scène pour représenter un fond. Voilà comment rajouter la voie lactée en fond.
+
+\code
+// dans init()
+
+// Add background
+var path = "images/MilkyWay/";
+var format = '.jpg';
+var urls = [
+    path + 'posx' + format, path + 'negx' + format,
+    path + 'posy' + format, path + 'negy' + format,
+    path + 'posz' + format, path + 'negz' + format
+];
+
+var textureCube    = new THREE.CubeTextureLoader().load( urls );
+textureCube.format = THREE.RGBFormat;
+scene.background   = textureCube;
+\endcode
+
+\b Exercice \b 2.6. Ajouter le fond "MilkyWay" ou "skybox". Cela donne:
+
+\image html tp3-q2-6.png "Avec la voie lactée en fond"
+
+\subsection ig_tp3_2_7 2.7 - Calculer des ombres entre objets
+
+Par défaut, le rendu graphique ne tient pas compte d'ombres possibles
+entre objets suivant la position de la lumière. Comme on a pu voir
+dans le TP ray-tracing, c'était un peu coûteux à calculer.
+
+Le principe pour calculer des ombres (assez) efficacement est de faire
+des "cartes d'ombres" (\a shadowmap). En fait, pour chaque source de
+lumière qui peut faire de l'ombre, on fait un rendu (très simplifié,
+juste la profondeur est conservée) des objets qui peuvent faire de
+l'ombre \a du \a point \a de \a vue \a de \a la \a lumière. La
+profondeur mémorisée en chaque point permet ensuite, lorsqu'on fait le
+rendu du point de vue de la caméra, de voir si le point considéré est
+dans l'ombre, en regardant la profondeur en ce point.
+
+\note On voit néanmoins que le renderer est obligé de faire plusieurs
+rendu suivant chaque lumière, ce qui peut être coûteux lorsque les
+scènes sont complexes.
+
+En three.js, c'est très simple de rajouter de l'ombre. Il faut d'abord
+indiquer au renderer qu'il y aura des ombres à calculer:
+
+\code
+renderer.shadowMap.enabled = true;
+// rendu coûteux mais plus joli (default: THREE.PCFShadowMap)
+renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
+\endcode
+
+Ensuite, il faut préciser quelles sont les lumières qui peuvent faire de l'ombre. Nous, on va faire en sorte que la lumière du soleil puisse faire de l'ombre.
+
+\code
+light.castShadow = true;
+// On peut aussi paramétrer la qualité du calcul
+light.shadow.mapSize.width = 512;  // default
+light.shadow.mapSize.height = 512; // default
+light.shadow.camera.near = 0.5;    // default
+light.shadow.camera.far = 50;
+\endcode
+
+Enfin, on précise quels objets peuvent faire de l'ombre, et quels objets peuvent recevoir de l'ombre.
+
+\code
+earth.castShadow = true;
+earth.receiveShadow = true;
+moon.castShadow = true;
+moon.receiveShadow = true;
+\endcode
+
+\b Exercice \b 2.7. Ajouter l'ombrage de la terre et de la lune. Vous devriez maintenant voir des éclipses !
+
+\section ig_tp3_3 3 - A vous de jouer
+
+Il y a bien sûr plein d'autres fonctionnalités dans three.js et
+WebGL. Nous n'avons fait qu'effleurer le sujet. Ceux intéressés par
+l'écriture de shader "à la mano" peuvent utiliser la classe
+ShaderMaterial. Ceux par défaut sont écrits par morceaux sous formes
+de chunks (dans three.js/src/renderers/shaders/ShaderChunk) puis
+assemblés par des \#include dans les matériaux (dans
+three.js/src/renderers/shaders/ShaderLib).
+
+Je vous invite à regarder les multiples exemples de three.js, qui
+donnent plein d'idées. 
+
+Vous pouvez compléter le système solaire, faire
+des planètes métalliques, des planètes de lave, des astéroïdes
+multiples sous forme de particules.  
+
+Vous pouvez aussi faire quelque chose de complètement différent.
+
+Bref, étonnez-moi !
+
+
+*/
+

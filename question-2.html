@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<title>A small introduction to three.js webgl [1]</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<link rel="stylesheet" href="css/basic.css">
+
+	<script src="three.js"></script>
+	<script src="js/Detector.js"></script>
+	<script src="js/OrbitControls.js"></script>
+	<script type="text/javascript">
+
+		// Checks that your browser supports WebGL. 
+		if (!Detector.webgl) Detector.addGetWebGLMessage();
+
+		var renderer = null;
+		var scene = null;
+		var camera = null;
+		var controls = null;
+
+		var cameraAngle = 0;
+
+		var sunGroup = null;
+		var earthOrbit = null;
+		var earthGroup = null;
+		var moonOrbit = null;
+		var sun = null;
+		var earth = null;
+		var moon = null;
+
+		var curTime = Date.now();
+
+		// This function is called whenever the document is loaded
+		function init() {
+			// Get display canvas
+			var canvas = document.getElementById("webglcanvas");
+			console.log(canvas);
+
+			// Create the Three.js renderer and attach it to our canvas
+			renderer = new THREE.WebGLRenderer({
+				canvas: canvas,
+				antialias: true
+			});
+			// Set the viewport size
+			renderer.setSize(canvas.width, canvas.height);
+			// Create a new Three.js scene
+			scene = new THREE.Scene();
+			// Add  a camera so we can view the scene
+			camera = new THREE.PerspectiveCamera(45, canvas.width / canvas.height,
+				1, 4000);
+
+			// Add background
+			var path = "images/MilkyWay/";
+			var format = '.jpg';
+			var urls = [
+				path + 'posx' + format, path + 'negx' + format,
+				path + 'posy' + format, path + 'negy' + format,
+				path + 'posz' + format, path + 'negz' + format
+			];
+
+			var textureCube = new THREE.CubeTextureLoader().load(urls);
+			textureCube.format = THREE.RGBFormat;
+			scene.background = textureCube;
+
+			controls = new THREE.OrbitControls(camera, render.domElement);
+			controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
+			controls.dampingFactor = 0.25;
+			controls.screenSpacePanning = false;
+			controls.minDistance = 2;
+			controls.maxDistance = 20;
+
+			// camera.position.y += 10;
+			// camera.rotation.x -= 0.5;
+
+			// Create a texture-mapped sphere and add it to the scene
+			// First, create the texture map
+			var earthMapUrl = "images/earth_atmos_2048.jpg";
+			var earthMap = new THREE.TextureLoader().load(earthMapUrl);
+
+			var moonMapUrl = "images/moon_1024.jpg";
+			var moonMap = new THREE.TextureLoader().load(moonMapUrl);
+
+			var sunMapUrl = "images/sun.png"
+			var sunMap = new THREE.TextureLoader().load(sunMapUrl);
+
+			// Now, create a Basic material; pass in the map
+			var sunMaterial = new THREE.MeshBasicMaterial({ map: sunMap });
+			sunMaterial.color = new THREE.Color('yellow');
+
+			// Now, create a Phon material; pass in the map
+			var earthMaterial = new THREE.MeshPhongMaterial({ map: earthMap });
+			earthMaterial.specular = new THREE.Color(1, 1, 1);
+
+			var moonMaterial = new THREE.MeshPhongMaterial({ map: moonMap });
+
+			// Create the Sun geometry
+			var sunGeometry = new THREE.SphereGeometry(2, 32, 16);
+
+			sun = new THREE.Mesh(sunGeometry, sunMaterial);
+
+			// Create the earth geometry
+			var earthGeometry = new THREE.SphereGeometry(1, 32, 16);
+
+			// And put the geometry and material together into a mesh
+			earth = new THREE.Mesh(earthGeometry, earthMaterial);
+
+			//Create the Moon geometry
+			var moonGeometry = new THREE.SphereGeometry(0.2, 16, 8);
+
+			moon = new THREE.Mesh(moonGeometry, moonMaterial);
+
+			moon.position.x = 2;
+
+			moonGroup = new THREE.Group();
+			moonGroup.add(moon);
+
+			earthGroup = new THREE.Group();
+			earthGroup.add(earth);
+			earthGroup.add(moonGroup);
+			earthGroup.add(camera);
+
+			earthGroup.position.x = 5;
+
+			earthOrbit = new THREE.Group();
+			earthOrbit.add(earthGroup);
+
+
+			sunGroup = new THREE.Group();
+			sunGroup.add(sun);
+			sunGroup.add(earthOrbit);
+
+			// Add a white point light
+			light = new THREE.PointLight(0xffffff, 1.5);
+			scene.add(light);
+			sunGroup.add(light);
+
+			// Finally, add the mesh to our scene
+			scene.add(sunGroup);
+		}
+
+
+		// This function is called regularly to update the canvas webgl.
+		function run() {
+			// Ask to call again run 
+			requestAnimationFrame(run);
+
+			// Render the scene
+			render();
+
+			// Calls the animate function if objects or camera should move
+			animate();
+		}
+
+		// This function is called regularly to take care of the rendering.
+		function render() {
+			// Render the scene
+			renderer.render(scene, camera);
+		}
+
+		// This function is called regularly to update objects.
+		function animate() {
+			// Computes how time has changed since last display
+			var now = Date.now();
+			var deltaTime = now - curTime;
+			curTime = now;
+			var fracTime = deltaTime / 1000; // in seconds
+			// Now we can move objects, camera, etc.
+
+			//camera.lookAt(new THREE.Vector3().setFromMatrixPosition(sun.matrixWorld));
+
+
+
+			var angle = fracTime * Math.PI * 2;
+			// Notez que l'axe y est l'axe "vertical" usuellement.
+			earthOrbit.rotation.y += angle / 10; // la terre tourne en 365 jours
+			earth.rotation.y += angle; // et en un jour sur elle-même
+			moonGroup.rotation.y += angle / 28; // la lune tourne en 28 jours autour de la terre
+			moon.rotation.y += angle / 28; // et en 28 jours aussi sur elle-même pour faire face à la terre
+
+			controls.update();
+			controls.target = new THREE.Vector3().setFromMatrixPosition(sun.matrixWorld);
+		}
+
+	</script>
+</head>
+
+<body>
+	<div id="info"> a first three.js example </div>
+	<canvas id="webglcanvas" style="border: none;background-color:#000000" width="600" height="500"></canvas>
+	<!-- We run the WebGL code at the end to be sure that the document is loaded.
+      -->
+	<script>
+		init(); run();
+	</script>
+</body>
+
+</html>
