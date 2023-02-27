@@ -16,8 +16,10 @@ declare global {
 		const src: string;
 		export default src;
 	}
-	
+
+	declare module '*glsl';
+
 	declare module 'konami-code';
 }
 
-export {};
+export { };

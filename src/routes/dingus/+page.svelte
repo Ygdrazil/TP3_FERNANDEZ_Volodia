@@ -7,6 +7,12 @@
 	import { onMount } from 'svelte';
 	import dingusModel from '$lib/assets/models/dingus_the_cat.glb';
 	import dingusMusic from '$lib/assets/sounds/dingus_theme.ogg';
+	import { goto } from '$app/navigation';
+
+	function goBack() {
+		goto("/");
+	}
+
 
 	// Checks that your browser supports WebGL.
 	if (!WebGL.isWebGLAvailable) {
@@ -113,8 +119,10 @@
 		run();
 	});
 </script>
+<button on:click={goBack}>go back</button>
 
 <main id="container">
+	<audio />
 	<h1>Dingus Time</h1>
 	<canvas id="webglcanvas" width="600" height="500" />
 </main>
@@ -131,5 +139,11 @@
 		width: 100%;
 		align-items: center;
 		justify-content: center;
+	}
+
+	svg {
+		color: white;
+		height: 20%;
+		width: 20%;
 	}
 </style>
