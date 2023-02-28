@@ -87,9 +87,10 @@
 		const textureLoader = new THREE.TextureLoader();
 
 		uniforms = {
-			uSunPos: { value: light.position },
+			uSunPos: { value: light.position }, // On peut garder la localPosition de la light car elle est à 0, 0, 0
 			texture1: { value: textureLoader.load(earthMapUrl) },
-			texture2: { value: textureLoader.load(earthEmissiveMapUrl) }
+			texture2: { value: textureLoader.load(earthEmissiveMapUrl) },
+			specularMap: { value: textureLoader.load(earthSpecularMapUrl) }
 		};
 
 		uniforms['texture1'].value.wrapS = uniforms['texture1'].value.wrapT = THREE.RepeatWrapping;
