@@ -8,7 +8,6 @@
 
 	import earthMapUrl from '$lib/assets/images/earth_atmos_2048.jpg';
 	import earthSpecularMapUrl from '$lib/assets/images/earth_specular_2048.jpg';
-	import earthNormalMapUrl from '$lib/assets/images/earth_normal_2048.jpg';
 	import earthEmissiveMapUrl from '$lib/assets/images/earth_lights_2048.png';
 	import moonMapUrl from '$lib/assets/images/moon_1024.jpg';
 	import sunMapUrl from '$lib/assets/images/2k_sun.jpg';

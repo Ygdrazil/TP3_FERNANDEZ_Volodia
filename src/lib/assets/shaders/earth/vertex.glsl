@@ -8,7 +8,6 @@ uniform mat4 uMatrixWorld;
 void main() {
 
     vUv = uv;
-    vNormal = normal;
 
     vSunPos = (modelMatrix * vec4(sunPos, 1.0)).xyz;
 
