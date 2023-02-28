@@ -210,7 +210,7 @@
 </script>
 
 <main id="container">
-	<h1>Question 2</h1>
+	<h1>Question 3</h1>
 	<canvas id="webglcanvas" width="600" height="500" />
 </main>
 
