@@ -12,9 +12,8 @@
 	import earthEmissiveMapUrl from '$lib/assets/images/earth_lights_2048.png';
 	import moonMapUrl from '$lib/assets/images/moon_1024.jpg';
 	import sunMapUrl from '$lib/assets/images/2k_sun.jpg';
-	import cloudMapUrl from '$lib/assets/images/cloud.png';
-	import sunVertexShader from '$lib/assets/shaders/sun/vertex.glsl';
-	import sunFragmentShader from '$lib/assets/shaders/sun/fragment.glsl';
+	import earthVertexShader from '$lib/assets/shaders/earth/vertex.glsl';
+	import earthFragmentShader from '$lib/assets/shaders/earth/fragment.glsl';
 
 	import posXMapUrl from '$lib/assets/images/MilkyWay/posx.jpg';
 	import negXMapUrl from '$lib/assets/images/MilkyWay/negx.jpg';
@@ -22,7 +21,6 @@
 	import negYMapUrl from '$lib/assets/images/MilkyWay/negy.jpg';
 	import posZMapUrl from '$lib/assets/images/MilkyWay/posz.jpg';
 	import negZMapUrl from '$lib/assets/images/MilkyWay/negz.jpg';
-	import { Vector3 } from 'three';
 
 	// Checks that your browser supports WebGL.
 	if (!WebGL.isWebGLAvailable) {
@@ -108,8 +106,8 @@
 
 		const earthMaterial = new THREE.ShaderMaterial({
 			uniforms: uniforms,
-			vertexShader: sunVertexShader,
-			fragmentShader: sunFragmentShader
+			vertexShader: earthVertexShader,
+			fragmentShader: earthFragmentShader
 		});
 
 		var sunMap = new THREE.TextureLoader().load(sunMapUrl);
