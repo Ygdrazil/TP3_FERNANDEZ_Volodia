@@ -22,6 +22,7 @@
 	import negYMapUrl from '$lib/assets/images/MilkyWay/negy.jpg';
 	import posZMapUrl from '$lib/assets/images/MilkyWay/posz.jpg';
 	import negZMapUrl from '$lib/assets/images/MilkyWay/negz.jpg';
+	import { Vector3 } from 'three';
 
 	// Checks that your browser supports WebGL.
 	if (!WebGL.isWebGLAvailable) {
@@ -87,11 +88,8 @@
 
 		const textureLoader = new THREE.TextureLoader();
 
-		let lightWorldPos = new THREE.Vector3();
-		light.getWorldPosition(lightWorldPos);
-
 		uniforms = {
-			uSunPos: { value: lightWorldPos },
+			uSunPos: { value: light.position },
 			texture1: { value: textureLoader.load(earthMapUrl) },
 			texture2: { value: textureLoader.load(earthEmissiveMapUrl) }
 		};
@@ -106,12 +104,6 @@
 		controls.minDistance = 2;
 		controls.maxDistance = 20;
 
-		// Create a texture-mapped sphere and add it to the scene
-		// First, create the texture map
-		// var earthMap = new THREE.TextureLoader().load(earthMapUrl);
-		// var earthSpecularMap = new THREE.TextureLoader().load(earthSpecularMapUrl);
-		// var earthNormalMap = new THREE.TextureLoader().load(earthNormalMapUrl);
-
 		var moonMap = new THREE.TextureLoader().load(moonMapUrl);
 
 		const earthMaterial = new THREE.ShaderMaterial({
@@ -125,12 +117,6 @@
 		// // Now, create a Basic material; pass in the map
 		var sunMaterial = new THREE.MeshBasicMaterial({ map: sunMap });
 		sunMaterial.color = new THREE.Color('yellow');
-
-		// Now, create a Phon material; pass in the map
-		// var earthMaterial = new THREE.MeshPhongMaterial({ map: earthMap });
-		// // earthMaterial.specular = new THREE.Color(0.05, 0.05, 0.05);
-		// earthMaterial.specularMap = earthSpecularMap;
-		// earthMaterial.normalMap = earthNormalMap;
 
 		var moonMaterial = new THREE.MeshPhongMaterial({ map: moonMap });
 
@@ -207,16 +193,12 @@
 		var fracTime = deltaTime / 1000; // in seconds
 		// Now we can move objects, camera, etc.
 
-		
-
 		var angle = fracTime * Math.PI * 2;
 		// Notez que l'axe y est l'axe "vertical" usuellement.
-		// earthOrbit.rotation.y += angle / 50; // la terre tourne en 365 jours
-		earth.rotation.y += angle / 28; // et en un jour sur elle-même
+		earthOrbit.rotation.y += angle / 50; // la terre tourne en 365 jours
+		earth.rotation.set(0, earth.rotation.y + angle / 28, 0); // et en un jour sur elle-même
 		moonGroup.rotation.y += angle / 10; // la lune tourne en 28 jours autour de la terre
 		moon.rotation.y += angle / 28; // et en 28 jours aussi sur elle-même pour faire face à la terre
-
-		earth.updateMatrix();
 
 		controls.update();
 		controls.target = new THREE.Vector3().setFromMatrixPosition(earth.matrixWorld);

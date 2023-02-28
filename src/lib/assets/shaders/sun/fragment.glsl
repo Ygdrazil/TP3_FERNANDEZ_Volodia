@@ -61,10 +61,13 @@ void main() {
 
     vec3 sunDirection = uSunPos - vPositionWorld;
 
-    float cosineAngleSunToNormal = dot(sunDirection, normalize(vNormal));
+    float cosineAngleSunToNormal = dot(sunDirection, vNormal);
+
+    cosineAngleSunToNormal = clamp( cosineAngleSunToNormal , -1.0, 1.0);
 
     float mixAmount = (cosineAngleSunToNormal + 1.0) / 2.0;
-    vec4 color = nightColor * (1.0 - mixAmount) + dayColor * mixAmount;
+    vec4 color = mix(nightColor, dayColor, mixAmount);
 
-    gl_FragColor = vec4(color.x, color.y, color.z, 1.0);
+    //gl_FragColor = vec4(color.x, color.y, color.z, 1.0);
+    gl_FragColor = vec4(color.xyz, 1.0);
 }
